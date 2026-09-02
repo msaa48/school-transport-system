@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>تسجيل الدخول — نظام تتبع النقل المدرسي</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 28px 22px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 0 4px;
+    text-align: center;
+  }
+  .subtitle {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    margin-bottom: 22px;
+  }
+  .tabs {
+    display: flex;
+    background: #0f172a;
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 18px;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #94a3b8;
+    transition: 0.2s;
+  }
+  .tab.active {
+    background: #2563eb;
+    color: #fff;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: #cbd5e1;
+    margin: 14px 0 6px;
+  }
+  input, select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: #f1f5f9;
+    font-size: 15px;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: #2563eb; }
+  .role-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .role-btn {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .role-btn.selected {
+    border-color: #2563eb;
+    background: rgba(37,99,235,0.15);
+    color: #fff;
+  }
+  button.submit {
+    width: 100%;
+    margin-top: 22px;
+    padding: 13px 0;
+    border: none;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.submit:disabled {
+    background: #334155;
+    cursor: not-allowed;
+  }
+  .msg {
+    margin-top: 16px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-align: center;
+    display: none;
+  }
+  .msg.error { background: rgba(239,68,68,0.15); color: #fca5a5; display: block; }
+  .msg.success { background: rgba(34,197,94,0.15); color: #86efac; display: block; }
+  .hint {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>نظام تتبع النقل المدرسي</h1>
+  <div class="subtitle">محافظة سوهاج</div>
+
+  <div class="tabs">
+    <div class="tab active" data-mode="login">تسجيل الدخول</div>
+    <div class="tab" data-mode="signup">حساب جديد</div>
+  </div>
+
+  <label>أنا:</label>
+  <div class="role-group">
+    <div class="role-btn selected" data-role="parent">ولي أمر</div>
+    <div class="role-btn" data-role="driver">سائق</div>
+  </div>
+
+  <label for="phone">رقم التليفون</label>
+  <input id="phone" type="tel" placeholder="01xxxxxxxxx" inputmode="numeric" />
+
+  <label for="password">كلمة السر</label>
+  <input id="password" type="password" placeholder="••••••••" />
+
+  <div class="hint" id="signupHint" style="display:none">
+    لازم يكون رقم التليفون ده هو نفسه المسجل عندك من إدارة المدرسة.
+  </div>
+
+  <button class="submit" id="submitBtn">دخول</button>
+
+  <div class="msg" id="msg"></div>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+  const SUPABASE_URL = 'https://pcvjfbhjjtihppcmrvhk.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C13DGz-jQBnE97NEr2EU7Q_5nZquRqx';
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let mode = 'login'; // or 'signup'
+  let role = 'parent'; // or 'driver'
+
+  const tabs = document.querySelectorAll('.tab');
+  const roleBtns = document.querySelectorAll('.role-btn');
+  const submitBtn = document.getElementById('submitBtn');
+  const msgEl = document.getElementById('msg');
+  const signupHint = document.getElementById('signupHint');
+  const phoneInput = document.getElementById('phone');
+  const passwordInput = document.getElementById('password');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      mode = tab.dataset.mode;
+      submitBtn.textContent = mode === 'login' ? 'دخول' : 'إنشاء الحساب';
+      signupHint.style.display = mode === 'signup' ? 'block' : 'none';
+      clearMsg();
+    });
+  });
+
+  roleBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      roleBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      role = btn.dataset.role;
+    });
+  });
+
+  function normalizePhone(raw) {
+    // keep digits only
+    return raw.replace(/\D/g, '');
+  }
+
+  function phoneToEmail(phone) {
+    return `${phone}@schooltransport-noreply.com`;
+  }
+
+  function showMsg(text, type) {
+    msgEl.textContent = text;
+    msgEl.className = `msg ${type}`;
+  }
+
+  function clearMsg() {
+    msgEl.className = 'msg';
+    msgEl.textContent = '';
+  }
+
+  submitBtn.addEventListener('click', async () => {
+    clearMsg();
+    const phone = normalizePhone(phoneInput.value);
+    const password = passwordInput.value;
+
+    if (phone.length < 10) {
+      showMsg('اكتب رقم تليفون صحيح', 'error');
+      return;
+    }
+    if (password.length < 6) {
+      showMsg('كلمة السر لازم تكون 6 حروف/أرقام على الأقل', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '...جاري التنفيذ';
+    const email = phoneToEmail(phone);
+
+    try {
+      if (mode === 'signup') {
+        // Only allow signup if the school admin already registered this phone
+        const { data: isRegistered, error: checkErr } = await supabase
+          .rpc('phone_is_registered', { p_phone: phone, p_role: role });
+
+        if (checkErr) throw checkErr;
+        if (!isRegistered) {
+          showMsg('الرقم ده مش مسجل عند إدارة المدرسة. كلم الإدارة الأول.', 'error');
+          resetBtn();
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+
+        // Link this new auth account to the pre-registered record
+        const { error: linkErr } = await supabase.rpc('link_my_phone', {
+          p_phone: phone,
+          p_role: role
+        });
+        if (linkErr) throw linkErr;
+
+        showMsg('تم إنشاء الحساب وربطه بنجاح! تقدر تسجل دخول دلوقتي.', 'success');
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        showMsg('تم تسجيل الدخول بنجاح.', 'success');
+        // TODO: redirect to the parent/driver dashboard page here
+      }
+    } catch (err) {
+      const raw = err?.message || 'حصل خطأ، حاول تاني';
+      let friendly = raw;
+      if (raw.includes('already registered')) friendly = 'الرقم ده عنده حساب بالفعل. جرب تسجل دخول.';
+      if (raw.includes('Invalid login credentials')) friendly = 'رقم التليفون أو كلمة السر غلط.';
+      showMsg(friendly, 'error');
+    } finally {
+      resetBtn();
+    }
+  });
+
+  function resetBtn() {
+    submitBtn.disabled = false;
+    submitBtn.textContent = mode === 'login' ? 'دخول' : 'إنشاء الحساب';
+  }
+</script>
+
+</body>
+</html>
