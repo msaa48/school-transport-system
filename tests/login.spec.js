@@ -21,7 +21,7 @@ const TEST_PASSWORD = process.env.TEST_PASSWORD || '';
 test.describe('تسجيل دخول ولي الأمر', () => {
   test('ولي الأمر يقدر يسجل دخول ببياناته الحقيقية', async ({ page }) => {
     // يفتح صفحة الدخول
-    await page.goto(`${BASE_URL}/index.html`);
+    await page.goto(`${BASE_URL}/`);
 
     // يتأكد إن تاب "تسجيل الدخول" (مش "حساب جديد") هو المفتوح
     // بنستخدم data-mode بدل النص، عشان "دخول" نص متكرر
