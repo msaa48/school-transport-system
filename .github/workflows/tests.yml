@@ -1,0 +1,45 @@
+# .github/workflows/tests.yml
+#
+# ده الملف اللي بيخلي GitHub يشغّل تستات Playwright لوحده.
+# دلوقتي معطّل من التشغيل التلقائي (مفيش schedule ولا push trigger) —
+# التشغيل الوحيد المتاح هو يدوي من تاب "Actions" في تطبيق GitHub بالموبايل
+# (زرار "Run workflow"), لحد ما تقرر تفعّل جدول Cron لاحقًا.
+
+name: Playwright Tests
+
+on:
+  workflow_dispatch: {}   # تشغيل يدوي بس — دوس على الزرار في تطبيق GitHub
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: npx playwright test
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
