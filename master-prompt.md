@@ -1,6 +1,6 @@
 # Master Prompt — نظام تتبع النقل المدرسي (سوهاج)
 
-> الملف ده بيتحقن كـ system prompt لموديلين: Groq/Llama 3.3 70B (الكاتب) وGemini Flash-Lite (الناقد/المراجع)، في حلقة أوتوماتيكية عن طريق GitHub Actions. **اقرأه بالكامل قبل أي خطوة.**
+> الملف ده بيتحقن كـ system prompt لموديلين: Groq/GPT-OSS 120B (الكاتب) وGemini Flash-Lite (الناقد/المراجع)، في حلقة أوتوماتيكية عن طريق GitHub Actions. **اقرأه بالكامل قبل أي خطوة.**
 
 ---
 
