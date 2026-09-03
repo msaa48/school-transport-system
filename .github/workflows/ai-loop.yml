@@ -12,6 +12,9 @@ concurrency:
 jobs:
   ai-loop:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
     timeout-minutes: 45   # حد أقصى للتشغيلة كلها عشان منستهلكش Minutes بلا داعي
 
     steps:
