@@ -1,7 +1,7 @@
 // scripts/ai-loop/run.js
 //
 // الحلقة الفعلية: بتقرأ test-plan.md، تاخد لحد MAX_ITEMS_PER_RUN بنود مش متعلّمة،
-// لكل بند: الكاتب (DeepSeek) يكتب كود+تست، بيتشغّل التست فعليًا بـ Playwright،
+// لكل بند: الكاتب (Groq / Llama 3.3 70B) يكتب كود+تست، بيتشغّل التست فعليًا بـ Playwright،
 // الناقد (Gemini) يراجع (منطق + screenshot)، لو التست عدّى فعليًا وGemini وافق
 // يتعلّم ✅ في test-plan.md مع commit. لو فشل 3 مرات يتفتح GitHub Issue وينتقل للتالي.
 //
@@ -37,15 +37,15 @@ function log(msg) {
 
 // ---------- أدوات أساسية ----------
 
-async function callDeepSeek(systemPrompt, userPrompt) {
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
+async function callGroq(systemPrompt, userPrompt) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -55,7 +55,7 @@ async function callDeepSeek(systemPrompt, userPrompt) {
   });
   const data = await res.json();
   if (!data.choices || !data.choices[0]) {
-    throw new Error(`DeepSeek رد بشكل غير متوقع: ${JSON.stringify(data).slice(0, 500)}`);
+    throw new Error(`Groq رد بشكل غير متوقع: ${JSON.stringify(data).slice(0, 500)}`);
   }
   return data.choices[0].message.content;
 }
@@ -178,17 +178,17 @@ function runPlaywrightTests() {
   }
 }
 
-// ---------- استخراج تعديلات الملفات من رد DeepSeek ----------
-// متوقع من DeepSeek يرجع بلوكات بالشكل:
+// ---------- استخراج تعديلات الملفات من رد Groq ----------
+// متوقع من Groq يرجع بلوكات بالشكل:
 // ### FILE: path/to/file
 // ```
 // المحتوى الكامل للملف
 // ```
-function parseFileEdits(deepSeekResponse) {
+function parseFileEdits(groqResponse) {
   const files = [];
   const regex = /###\s*FILE:\s*(\S+)\s*\n```[a-zA-Z]*\n([\s\S]*?)```/g;
   let match;
-  while ((match = regex.exec(deepSeekResponse)) !== null) {
+  while ((match = regex.exec(groqResponse)) !== null) {
     files.push({ file: match[1].trim(), content: match[2] });
   }
   return files;
@@ -248,19 +248,19 @@ async function processItem(item, masterPrompt) {
       `### FILE: tests/اسم-التست.spec.js\n\`\`\`js\n(محتوى التست الكامل)\n\`\`\`\n\n` +
       `مهم: رجّع المحتوى الكامل لكل ملف بتعدّله، مش diff. لو الملف مش محتاج تعديل متبعتوش.`;
 
-    let deepSeekResponse;
+    let groqResponse;
     try {
-      deepSeekResponse = await callDeepSeek(masterPrompt, userPrompt);
+      groqResponse = await callGroq(masterPrompt, userPrompt);
     } catch (err) {
-      log(`❌ فشل استدعاء DeepSeek: ${err.message}`);
-      lastFailureReason = `فشل الاتصال بـ DeepSeek: ${err.message}`;
+      log(`❌ فشل استدعاء Groq: ${err.message}`);
+      lastFailureReason = `فشل الاتصال بـ Groq: ${err.message}`;
       continue;
     }
 
-    const files = parseFileEdits(deepSeekResponse);
+    const files = parseFileEdits(groqResponse);
     if (files.length === 0) {
-      log('❌ مفيش تعديلات ملفات واضحة في رد DeepSeek — هيتعاد المحاولة.');
-      lastFailureReason = 'رد DeepSeek متكانش فيه بلوكات ### FILE: بالشكل المطلوب.';
+      log('❌ مفيش تعديلات ملفات واضحة في رد Groq — هيتعاد المحاولة.');
+      lastFailureReason = 'رد Groq متكانش فيه بلوكات ### FILE: بالشكل المطلوب.';
       continue;
     }
 
