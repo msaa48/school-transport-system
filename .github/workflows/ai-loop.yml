@@ -1,9 +1,7 @@
 name: AI Development Loop
 
-# جدول التشغيل: كل ساعة، + إمكانية تشغيل يدوي للتجربة
+# جدول التشغيل: تشغيل يدوي فقط من تاب Actions (لحد ما نتأكد كل حاجة شغالة صح)
 on:
-  schedule:
-    - cron: '0 * * * *'   # كل ساعة عند الدقيقة 0
   workflow_dispatch: {}    # يسمح بتشغيل يدوي من تاب Actions
 
 # منع تراكم أكتر من تشغيلة شغالة في نفس الوقت
@@ -35,6 +33,64 @@ jobs:
 
       - name: Verify required secrets exist
         run: |
+          if [ -z "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
+            echo "::error::DEEPSEEK_API_KEY مش موجود في الـ Secrets. استوقف."
+            exit 1
+          fi
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "::error::GEMINI_API_KEY مش موجود في الـ Secrets. استوقف."
+            exit 1
+          fi
+          if [ -z "${{ secrets.BASE_URL }}" ]; then
+            echo "::error::BASE_URL مش موجود في الـ Secrets. استوقف."
+            exit 1
+          fi
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "::error::SUPABASE_URL مش موجود في الـ Secrets. استوقف."
+            exit 1
+          fi
+          if [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY مش موجود في الـ Secrets. استوقف."
+            exit 1
+          fi
+          echo "كل الـ Secrets المطلوبة موجودة."
+
+      - name: Run AI development loop
+        id: ai_loop
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          # حدود المحاولات والبنود متفق عليها في master-prompt.md قسم 7
+          MAX_ATTEMPTS_PER_ITEM: 3
+          MAX_ITEMS_PER_RUN: 3
+        run: node scripts/ai-loop/run.js
+
+      - name: Upload run log as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-loop-log-${{ github.run_id }}
+          path: scripts/ai-loop/run-log.md
+          retention-days: 30
+
+      - name: Commit any changes made by the loop
+        if: always()
+        run: |
+          git config user.name "ai-loop-bot"
+          git config user.email "ai-loop-bot@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "🤖 AI loop: تحديثات تلقائية (run #${{ github.run_id }})"
+            git push
+          else
+            echo "مفيش تغييرات لعمل commit ليها."
+          fi        run: |
           if [ -z "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
             echo "::error::DEEPSEEK_API_KEY مش موجود في الـ Secrets. استوقف."
             exit 1
