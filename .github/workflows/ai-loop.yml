@@ -93,52 +93,6 @@ jobs:
             git push
           else
             echo "مفيش تغييرات لعمل commit ليها."
-          fi        run: |
-          if [ -z "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
-            echo "::error::DEEPSEEK_API_KEY مش موجود في الـ Secrets. استوقف."
-            exit 1
           fi
-          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
-            echo "::error::GEMINI_API_KEY مش موجود في الـ Secrets. استوقف."
-            exit 1
-          fi
-          if [ -z "${{ secrets.BASE_URL }}" ]; then
-            echo "::error::BASE_URL مش موجود في الـ Secrets. استوقف."
-            exit 1
-          fi
-          echo "كل الـ Secrets المطلوبة موجودة."
 
-      - name: Run AI development loop
-        id: ai_loop
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          BASE_URL: ${{ secrets.BASE_URL }}
-          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          # حدود المحاولات والبنود متفق عليها في master-prompt.md قسم 7
-          MAX_ATTEMPTS_PER_ITEM: 3
-          MAX_ITEMS_PER_RUN: 3
-        run: node scripts/ai-loop/run.js
-
-      - name: Upload run log as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-loop-log-${{ github.run_id }}
-          path: scripts/ai-loop/run-log.md
-          retention-days: 30
-
-      - name: Commit any changes made by the loop
-        if: always()
-        run: |
-          git config user.name "ai-loop-bot"
-          git config user.email "ai-loop-bot@users.noreply.github.com"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "🤖 AI loop: تحديثات تلقائية (run #${{ github.run_id }})"
-            git push
-          else
-            echo "مفيش تغييرات لعمل commit ليها."
-          fi
+ 
